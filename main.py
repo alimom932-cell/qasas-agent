@@ -1,8 +1,6 @@
-# الوكيل المقاتل V4 - وضع البقاء 30 يوم
-import os, pickle, base64, random, textwrap, json, datetime, re
+import os, pickle, base64, textwrap, datetime, re
 from gtts import gTTS
 from PIL import Image
-# اصلاح مشكلة ANTIALIAS
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.Resampling.LANCZOS
 from moviepy.editor import *
@@ -13,10 +11,9 @@ from google.auth.transport.requests import Request
 import google.generativeai as genai
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-NISH = "قصص واقعية مؤثرة"
 
 def log(msg):
-    print(f"[{datetime.datetime.now()}] {msg}")
+    print(msg)
 
 def setup_creds():
     if os.getenv("TOKEN_B64"):
@@ -39,55 +36,41 @@ try:
 except:
     model = genai.GenerativeModel("gemini-flash-latest")
 
-log("🤖 الوكيل استيقظ")
+log("Agent started")
+winning_word = "Alwalidain"
+try:
+    ch = youtube.channels().list(part="statistics", mine=True).execute()
+    log(f"Channel stats: {ch['items'][0]['statistics']}")
+except Exception as e:
+    log(f"Channel check skipped: {e}")
 
-def spy_and_research():
-    winning_word = "بر الوالدين"
-    top_title = "بر الوالدين"
-    try:
-        ch = youtube.channels().list(part="contentDetails,statistics", mine=True).execute()
-        log(f"📊 قناتك: {ch['items'][0]['statistics']}")
-    except Exception as e:
-        log(f"⚠️ تحليل القناة تخطيناه: {e}")
-    viral_keywords = ["قصة حقيقية حدثت بالفعل", "قصة تبكي الحجر", "بر الوالدين"]
-    prompt_research = f"انت صاحب قناة قصص واقعية. موضوعك الرابح '{winning_word}'. اعطني 3 افكار قصص جديدة مضمونة تجيب مشاهدات عالية في السعودية"
-    try:
-        res = model.generate_content(prompt_research)
-        log(f"💡 افكار: {res.text[:300]}")
-    except Exception as e:
-        log(f"بحث فشل: {e}")
-    return winning_word, top_title, viral_keywords
-
-winning_word, top_title, viral_keywords = spy_and_research()
-
-def generate_3_strategies(winning_word):
+def generate_3():
     strategies = []
     prompts = [
-        f"اكتب قصة واقعية مؤثرة جدا عن {winning_word} بأسلوب يبكي، 180 كلمة، فيها تضحية ومفاجأة. بالعربية الفصحى البسيطة. فقط القصة.",
-        f"اكتب قصة واقعية صادمة جدا عن الخيانة والانتقام، 180 كلمة، فيها twist. فقط القصة.",
-        f"اكتب قصة واقعية عن معجزة حقيقية حدثت لفقير، 180 كلمة، تعطي امل. فقط القصة."
+        "Write a very emotional real story about bir al walidain, 180 words, with sacrifice and surprise ending. In simple Arabic. Only story.",
+        "Write a shocking real story about betrayal and revenge, 180 words, twist ending. In Arabic. Only story.",
+        "Write a real miracle story about a poor man becoming rich, 180 words, hopeful. In Arabic. Only story."
     ]
-    titles_templates = [
-        f"قصة {winning_word} التي ابكت الملايين - لن تصدق ماذا حدث",
-        f"صدمة!! زوجة تفعل هذا بزوجها بعد 10 سنوات - قصة حقيقية",
-        f"فقير نام جائعا واستيقظ مليونيرا - معجزة حقيقية"
+    titles_ar = [
+        "قصة بر الوالدين التي ابكت الملايين - لن تصدق النهاية",
+        "صدمة زوجة تفعل هذا بزوجها بعد 10 سنوات - قصة حقيقية",
+        "فقير نام جائعا واستيقظ مليونيرا - معجزة حقيقية"
     ]
-    for i, prompt in enumerate(prompts):
+    for i, p in enumerate(prompts):
         try:
-            res = model.generate_content(prompt)
+            res = model.generate_content(p)
             story = res.text.strip().replace("*","")
-            title = titles_templates[i]
-            strategies.append((title, story))
-            log(f"✍️ قصة {i+1} جاهزة")
+            strategies.append((titles_ar[i], story))
+            log(f"Story {i+1} ready")
         except Exception as e:
-            log(f"فشل توليد {i+1}: {e}")
-            strategies.append((titles_templates[i], "كان رجل فقير يعمل بجد. وجد محفظة مليئة بالمال. ارجعها لصاحبها. كافأه الله بضعفها."))
+            log(f"Gen {i+1} failed: {e}")
+            strategies.append((titles_ar[i], "كان رجل فقير يعمل بجد. وجد محفظة مليئة بالمال. ارجعها لصاحبها. كافأه الله بضعفها."))
     return strategies
 
-stories = generate_3_strategies(winning_word)
+stories = generate_3()
 
-def create_video_with_thumbnail(title, story, idx):
-    log(f"🎬 ينشئ فيديو {idx}")
+def create_video(title, story, idx):
+    log(f"Creating video {idx}")
     tts = gTTS(text=story, lang='ar', slow=False)
     tts.save(f"voice_{idx}.mp3")
     voice = AudioFileClip(f"voice_{idx}.mp3")
@@ -122,4 +105,27 @@ def create_video_with_thumbnail(title, story, idx):
         small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 45)
     except:
         big = small = ImageFont.load_default()
-    td.text((W//2, 220), "قصة ح
+    td.text((W//2, 220), "QISSA HAQIQIYA", font=big, fill=(255,255,0), anchor="mm")
+    td.text((W//2, 500), title[:28], font=small, fill=(255,255,255), anchor="mm")
+    thumb.save(f"thumb_{idx}.jpg")
+    return file, f"thumb_{idx}.jpg"
+
+for idx, (title, story) in enumerate(stories, 1):
+    try:
+        video_file, thumb_file = create_video(title, story, idx)
+        description = f"{story}\n\n#qissa #qisas_waqiea"
+        log(f"Uploading {idx}/3 PUBLIC - {title}")
+        res = youtube.videos().insert(
+            part="snippet,status",
+            body={
+                "snippet": {"title": title[:95], "description": description, "categoryId": "24", "tags": ["qissa", "qissa haqiqiya"]},
+                "status": {"privacyStatus": "public", "selfDeclaredMadeForKids": False}
+            },
+            media_body=MediaFileUpload(video_file, chunksize=-1, resumable=True)
+        ).execute()
+        vid_id = res['id']
+        log(f"DONE: https://youtu.be/{vid_id}")
+        youtube.thumbnails().set(videoId=vid_id, media_body=MediaFileUpload(thumb_file)).execute()
+    except Exception as e:
+        log(f"Video {idx} failed: {e}")
+log("Finished 3 videos PUBLIC")
