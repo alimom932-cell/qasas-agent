@@ -1,0 +1,23 @@
+name: Agent V4 Survival Mode
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  survive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Run Survival Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLIENT_SECRET_B64: ${{ secrets.CLIENT_SECRET_B64 }}
+          TOKEN_B64: ${{ secrets.TOKEN_B64 }}
+        run: python main.py
